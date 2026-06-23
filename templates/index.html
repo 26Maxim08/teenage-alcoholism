@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Скрининг риска злоупотребления алкоголем</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <h1>Скрининг риска злоупотребления алкоголем</h1>
+    <p>Модель оценивает вероятность того, что студент относится к группе повышенного
+       потребления алкоголя, по его учебному профилю и образу жизни. Заполните анкету
+       или подставьте случайного студента из датасета.</p>
+    <div class="badges">
+      <span class="badge">Модель: <b>{{ model_name }}</b></span>
+      <span class="badge">ROC-AUC: <b>{{ '%.2f'|format(roc_auc) }}</b></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- форма -->
+    <form id="form" autocomplete="off">
+      {% for group, fields in grouped %}
+      <div class="section">
+        <h2>{{ group }}</h2>
+        <div class="fields">
+          {% for f in fields %}
+          <div class="field">
+            <label for="{{ f.name }}">{{ f.label }}</label>
+            {% if f.type == 'number' %}
+              <input type="number" id="{{ f.name }}" name="{{ f.name }}"
+                     min="{{ f.min }}" max="{{ f.max }}" step="1" value="{{ f.default }}">
+            {% else %}
+              <select id="{{ f.name }}" name="{{ f.name }}">
+                {% for o in f.options %}
+                <option value="{{ o.value }}" {% if o.value == f.default %}selected{% endif %}>{{ o.label }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <div class="actions">
+        <button type="submit" class="btn-primary">Оценить риск</button>
+        <button type="button" class="btn-ghost" id="sample">Случайный студент</button>
+      </div>
+    </form>
+
+    <!-- панель результата -->
+    <aside class="panel">
+      <h2>Оценка риска</h2>
+      <div id="idle" class="idle">Заполните анкету и нажмите «Оценить риск».</div>
+      <div id="result" style="display:none">
+        <div class="readout" id="pct">—</div>
+        <div class="verdict" id="verdict">—</div>
+        <div class="gauge">
+          <div class="thr" id="thr-mark"></div>
+          <div class="needle" id="needle"></div>
+        </div>
+        <div class="scale"><span>0%</span><span>50%</span><span>100%</span></div>
+        <div class="thr-row">
+          <label>Порог решения <span id="thr-val">0.50</span></label>
+          <input type="range" id="thr" min="0.10" max="0.80" step="0.01" value="{{ app_threshold }}">
+          <div class="hint">Понижая порог, вы повышаете чувствительность (recall) — полезно
+            для скрининга, где важнее не пропустить студента из группы риска.
+            Рекомендованный порог для скрининга: {{ '%.2f'|format(recall_threshold) }}.</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const idle = document.getElementById('idle');
+const result = document.getElementById('result');
+const pct = document.getElementById('pct');
+const verdict = document.getElementById('verdict');
+const needle = document.getElementById('needle');
+const thrMark = document.getElementById('thr-mark');
+const thr = document.getElementById('thr');
+const thrVal = document.getElementById('thr-val');
+let lastProba = null;
+
+function collect(){
+  const data = {};
+  new FormData(form).forEach((v,k)=> data[k]=v);
+  return data;
+}
+
+function render(){
+  if(lastProba===null) return;
+  const t = parseFloat(thr.value);
+  pct.textContent = (lastProba*100).toFixed(1) + '%';
+  needle.style.left = (lastProba*100) + '%';
+  thrMark.style.left = (t*100) + '%';
+  thrVal.textContent = t.toFixed(2);
+  const risk = lastProba >= t;
+  verdict.textContent = risk ? '⚠ Группа риска' : '✓ Низкий риск';
+  verdict.className = 'verdict ' + (risk ? 'risk' : 'safe');
+}
+
+async function predict(){
+  idle.style.display='none'; result.style.display='block';
+  pct.innerHTML = '<span class="spinner"></span>';
+  verdict.textContent=''; verdict.className='verdict';
+  try{
+    const r = await fetch('/predict',{method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(collect())});
+    const d = await r.json();
+    lastProba = d.probability; render();
+  }catch(e){
+    pct.textContent='—';
+    verdict.textContent='Ошибка запроса. Проверьте, что сервер запущен.';
+    verdict.className='verdict risk';
+  }
+}
+
+form.addEventListener('submit', e=>{ e.preventDefault(); predict(); });
+thr.addEventListener('input', render);
+
+document.getElementById('sample').addEventListener('click', async ()=>{
+  const r = await fetch('/sample'); const d = await r.json();
+  for(const [k,v] of Object.entries(d)){
+    const el = document.getElementById(k);
+    if(el) el.value = v;
+  }
+  predict();
+});
+</script>
+</body>
+</html>

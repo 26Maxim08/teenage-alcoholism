@@ -1,0 +1,34 @@
+{
+  "selected_model": "Логистическая регрессия",
+  "roc_auc": 0.773,
+  "app_threshold": 0.5,
+  "recall_threshold": 0.30000000000000004,
+  "metrics_default": {
+    "threshold": 0.5,
+    "accuracy": 0.722,
+    "precision": 0.533,
+    "recall": 0.667,
+    "f1": 0.593
+  },
+  "metrics_operating": {
+    "threshold": 0.3,
+    "accuracy": 0.582,
+    "precision": 0.412,
+    "recall": 0.875,
+    "f1": 0.56
+  },
+  "cv_results": {
+    "Логистическая регрессия": [
+      0.719,
+      0.057
+    ],
+    "Случайный лес": [
+      0.696,
+      0.055
+    ],
+    "Градиентный бустинг": [
+      0.637,
+      0.054
+    ]
+  }
+}
