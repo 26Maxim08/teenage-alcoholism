@@ -140,7 +140,7 @@ def main():
     }
 
     cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=5, random_state=RANDOM_STATE)
-    print("\n=== Сравнение моделей (повторный 5×5 CV, ROC-AUC) ===")
+    print("\nСравнение моделей ")
     cv_results = {}
     for name, clf in candidates.items():
         pipe = Pipeline([("pre", pre), ("clf", clf)])
@@ -184,8 +184,8 @@ def main():
     m_default = block(0.5)
     m_op = block(op_threshold)
     print(f"\nROC-AUC (тест): {roc_auc}")
-    print("Порог 0.50 (основной)        :", m_default)
-    print("Порог опт. (режим скрининга) :", m_op)
+    print("Порог 0.5        :", m_default)
+    print("Порог 0.3        :", m_op)
     pred_def = (proba >= 0.5).astype(int)
     print("\nОтчёт при пороге 0.5:")
     print(classification_report(y_test, pred_def, target_names=["норма", "риск"]))
