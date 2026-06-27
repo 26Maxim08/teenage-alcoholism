@@ -1,7 +1,3 @@
-"""
-Веб-интерфейс для модели определения риска злоупотребления алкоголем.
-Запуск:  python app.py  ->  http://127.0.0.1:5000
-"""
 import joblib
 import pandas as pd
 from flask import Flask, render_template, request, jsonify
